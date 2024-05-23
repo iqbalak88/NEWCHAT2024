@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GENIE Chatbot</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@100;300;400;500;700;800;900&display=swap">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        }
+
+        body {
+            background: #3d3a33b6;
+        }
+
+        #app {
+            width: 100vw;
+            height: 100vh;
+            background: #23251f;
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+
+            background-image: url('ablockerlogo1.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: right top;
+            opacity: 1;
+            background-blend-mode: color-burn;
+            background-clip: padding-box;
+            animation-direction: reverse;
+            background-attachment: fixed;
+            background-blend-mode: luminosity;
+        }
+
+        #chat_container {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            overflow-y: scroll;
+
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+
+            padding-bottom: 20px;
+            scroll-behavior: smooth;
+        }
+
+        /* hides scrollbar */
+        #chat_container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .wrapper {
+            width: 100%;
+            padding: 15px;
+        }
+
+        .ai {
+            background: #3036a1;
+        }
+
+        .chat {
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .profile {
+            width: 36px;
+            height: 36px;
+            border-radius: 5px;
+
+            background: #5436DA;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .ai .profile {
+            background: #10a37f;
+        }
+
+        .profile img {
+            width: 60%;
+            height: 60%;
+            object-fit: contain;
+        }
+
+        .message {
+            flex: 1;
+
+            color: #dcdcdc;
+            font-size: 20px;
+
+            max-width: 100%;
+            overflow-x: scroll;
+
+            white-space: pre-wrap;
+
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* hides scrollbar */
+        .message::-webkit-scrollbar {
+            display: none;
+        }
+
+        form {
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 10px;
+            background: #1b1c20;
+
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+        }
+
+        textarea {
+            width: 100%;
+
+            color: #fff;
+            font-size: 18px;
+
+            padding: 10px;
+            background: transparent;
+            border-radius: 5px;
+            border: none;
+            outline: none;
+        }
+
+        button {
+            outline: 0;
+            border: 0;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        form img {
+            width: 30px;
+            height: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="chat_container" id="chat-log"></div>
+        <div id="loader" class="loading-message" style="display: none;">
+            <img src="https://i.gifer.com/ZZ5H.gif" width="30px" alt="Loading...">
+        </div>
+        <form>
+            <textarea name="prompt" id="user-input" rows="1" cols="1" placeholder="Ask Genie..." onkeydown="handleKeyDown(event)"></textarea>
+            <button type="button" onclick="sendMessage()">
+                <img src="https://img.icons8.com/ios-filled/50/000000/send.png" alt="send" />
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const chatLog = document.getElementById("chat_container");
+        const userInput = document.getElementById("user-input");
+        const loader = document.getElementById("loader");
+
+        async function sendMessage() {
+            const userMessage = userInput.value;
+            userInput.value = "";
+
+            // Show user message
+            const userMessageContainer = document.createElement("div");
+            userMessageContainer.className = "chat";
+            userMessageContainer.innerHTML = `
+                <div class="profile">
+                    <img src="https://img.icons8.com/ios-filled/50/000000/user.png" alt="User">
+                </div>
+                <div class="message user-message">${userMessage}</div>`;
+            chatLog.appendChild(userMessageContainer);
+
+            // Scroll to the bottom of chat log
+            chatLog.scrollTop = chatLog.scrollHeight;
+
+            // Show loading indicator
+            loader.style.display = "block";
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ message: userMessage })
+                });
+
+                const responseData = await response.json();
+                const botMessage = responseData.response;
+
+                // Hide loading indicator
+                loader.style.display = "none";
+
+                // Create bot message container
+                const botMessageContainer = document.createElement("div");
+                botMessageContainer.className = "chat ai";
+                botMessageContainer.innerHTML = `
+                    <div class="profile ai">
+                        <img src="https://img.icons8.com/ios-filled/50/000000/robot.png" alt="AI">
+                    </div>
+                    <div class="message bot-message"></div>`;
+                chatLog.appendChild(botMessageContainer);
+
+                // Typing effect
+                typeMessage(botMessage, botMessageContainer.querySelector('.message'));
+
+            } catch (error) {
+                console.error("Error:", error);
+                // Handle errors gracefully, e.g., display an error message to the user
+            }
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        }
+
+        function typeMessage(message, container) {
+            let index = 0;
+            const typingSpeed = 20; // Adjust typing speed here
+
+            function type() {
+                if (index < message.length) {
+                    container.textContent += message.charAt(index);
+                    index++;
+                    setTimeout(type, typingSpeed);
+                    chatLog.scrollTop = chatLog.scrollHeight; // Scroll to the bottom of chat log
+                }
+            }
+
+            type();
+        }
+    </script>
+</body>
+</html>
